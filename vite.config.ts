@@ -64,7 +64,7 @@ export default defineConfig({
       entry: 'src/main.ts',
       userscript: {
         "name": "MikuMiku-share - 链接转为二维码",
-        "namespace": "http://tampermonkey.net/",
+        "namespace": "https://github.com/MakotoArai-CN/mikumiku-share",
         "version": "1.2.2",
         "author": "MakotoArai",
         "description": "把鼠标可以点击的链接转为二维码。",
