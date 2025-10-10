@@ -83,7 +83,7 @@ export class SettingsPanel {
                     ${this.createSwitch('lan-switch', '启用局域网分享', config.enableLAN)}
                 </div>
                 <div class="form-group">
-                    ${this.createSwitch('auto-resolve-switch', '自动解析重定向链接', config.autoResolveRedirect)}
+                    ${this.createSwitch('auto-resolve-switch', '链接净化', config.autoResolveRedirect)}
                     <p style="font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 0;">
                         自动识别并解析知乎、CSDN等网站的跳转链接，直接显示真实URL的二维码
                     </p>

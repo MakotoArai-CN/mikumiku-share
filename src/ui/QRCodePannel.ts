@@ -141,14 +141,11 @@ export class QRCodePannel {
         this.element.innerHTML = '';
 
         const size = this.isEnlarged ? this.enlargedSize : this.originalSize;
-        const qrPadding = Math.ceil(size * 0.05);
-
         new QRious({
             element: this.canvas,
             value: this.currentUrl || '',
             size: size,
             level: 'H',
-            padding: qrPadding,
             background: '#ffffff',
             foreground: '#000000',
         });
@@ -156,7 +153,6 @@ export class QRCodePannel {
         this.element.appendChild(this.canvas);
 
         const footer = document.createElement('footer');
-
         if (this.currentConfig.enableLAN) {
             const lanButton = this.createButton('📡 局域网打开', this.handleLanShare.bind(this));
             footer.appendChild(lanButton);

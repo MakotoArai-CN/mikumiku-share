@@ -23,7 +23,7 @@ export class StyleManager {
         }
         
         /* --- QR码面板样式 --- */
-        .mms-qrcode-pannel {position: fixed; z-index: 99999999; background-color: #ffffff; border-radius: 12px;box-shadow: 0 10px 30px rgba(0,0,0,0.15); padding: 16px; display: flex;flex-direction: column; align-items: center; gap: 12px; opacity: 0;transform: scale(0.95); transition: opacity 0.2s ease-out, transform 0.2s ease-out;pointer-events: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;user-select: none;
+        .mms-qrcode-pannel {position: fixed; z-index: 99999999; background-color: #ffffff; border-radius: 12px;box-shadow: 0 10px 30px rgba(0,0,0,0.15);display: flex;flex-direction: column; align-items: center; gap: 12px; opacity: 0;transform: scale(0.95); transition: opacity 0.2s ease-out, transform 0.2s ease-out;pointer-events: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;user-select: none;
         }
         .mms-qrcode-pannel.visible { opacity: 1; transform: scale(1); pointer-events: all; }
         .mms-qrcode-pannel:active { cursor: grab; }

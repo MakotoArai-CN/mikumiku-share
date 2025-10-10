@@ -65,7 +65,7 @@ export default defineConfig({
       userscript: {
         "name": "MikuMiku-share - 链接转为二维码",
         "namespace": "http://tampermonkey.net/",
-        "version": "1.0",
+        "version": "1.2.2",
         "author": "MakotoArai",
         "description": "把鼠标可以点击的链接转为二维码。",
         "match": ["*://*/*"],
@@ -82,7 +82,6 @@ export default defineConfig({
       build: {
         fileName: 'mikumiku-share.user.js',
         metaFileName: true,
-        // minify 选项已移至 defineConfig 根配置中
       },
     }),
   ],
