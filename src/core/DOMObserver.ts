@@ -13,6 +13,7 @@ export class DOMObserver {
     private hoverTimeout: number | null = null;
     private currentTarget: HTMLAnchorElement | null = null;
     private processedLinks: WeakSet<HTMLAnchorElement> = new WeakSet();
+    private isMouseOverLink: boolean = false;
 
     constructor(shadowRoot: ShadowRoot, configManager: ConfigManager, lanSharer: LanSharer) {
         this.shadowRoot = shadowRoot;
@@ -66,29 +67,54 @@ export class DOMObserver {
 
         const target = (event.target as HTMLElement).closest('a');
         if (target && target.href && this.isLinkValid(target.href)) {
+            this.isMouseOverLink = true;
+            
             if (this.hoverTimeout) {
                 clearTimeout(this.hoverTimeout);
             }
 
             this.currentTarget = target;
             this.hoverTimeout = window.setTimeout(() => {
-                if (this.currentTarget) {
+                if (this.currentTarget && this.isMouseOverLink) {
                     const originalUrl = this.currentTarget.getAttribute('data-original-href') || this.currentTarget.href;
                     this.qrCodePannel.show(this.currentTarget.href, event.clientX, event.clientY, originalUrl);
+                    this.qrCodePannel.setLinkHoverState(true);
+                    
+                    // 修改：如果触发条件是 onLinkLeave，在显示二维码时就开始计时
+                    if (this.currentConfig.qrCodeHideTrigger === 'onLinkLeave' && 
+                        this.currentConfig.qrCodeAutoHide && 
+                        this.currentConfig.qrCodeHideDelay > 0) {
+                        this.qrCodePannel.startAutoHideTimer();
+                    }
                 }
             }, this.currentConfig.hoverDelay);
         }
     }
 
     private handleMouseOut(event: MouseEvent): void {
-        if (this.hoverTimeout) {
-            clearTimeout(this.hoverTimeout);
-            this.hoverTimeout = null;
-        }
-
+        const target = (event.target as HTMLElement).closest('a');
         const relatedTarget = event.relatedTarget as Node;
-        if (!this.shadowRoot.contains(relatedTarget) && !this.qrCodePannel.isMouseOver()) {
-            this.qrCodePannel.hide();
+        
+        // 检查是否真的离开了链接
+        if (target && target === this.currentTarget) {
+            // 检查鼠标是否移动到了二维码面板上
+            if (relatedTarget && this.shadowRoot.contains(relatedTarget)) {
+                // 鼠标移动到了二维码面板，不做处理
+                return;
+            }
+            
+            this.isMouseOverLink = false;
+            this.qrCodePannel.setLinkHoverState(false);
+            
+            if (this.hoverTimeout) {
+                clearTimeout(this.hoverTimeout);
+                this.hoverTimeout = null;
+            }
+            
+            // 根据配置决定是否立即隐藏（当不启用自动隐藏时）
+            if (!this.currentConfig.qrCodeAutoHide && !this.qrCodePannel.isMouseOver()) {
+                this.qrCodePannel.hide();
+            }
         }
     }
 

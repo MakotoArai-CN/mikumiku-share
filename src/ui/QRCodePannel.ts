@@ -1,4 +1,3 @@
-// src/ui/QRCodePannel.ts
 import QRious from 'qrious';
 import { ConfigManager } from '../core/ConfigManager';
 import { IConfig } from '../types';
@@ -23,6 +22,10 @@ export class QRCodePannel {
     private originalSize: number = 160;
     private enlargedSize: number = 320;
     private lastClickTime: number = 0;
+    private autoHideTimeout: number | null = null;
+    private isLinkHovered: boolean = false;
+    private mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
+    private mouseUpHandler: ((e: MouseEvent) => void) | null = null;
 
     constructor(shadowRoot: ShadowRoot, configManager: ConfigManager, lanSharer: LanSharer) {
         this.shadowRoot = shadowRoot;
@@ -40,29 +43,73 @@ export class QRCodePannel {
 
         this.element.addEventListener('mouseenter', () => {
             this.isMouseOverPanel = true;
+            // 鼠标进入时取消自动隐藏
+            if (this.autoHideTimeout) {
+                clearTimeout(this.autoHideTimeout);
+                this.autoHideTimeout = null;
+            }
         });
 
         this.element.addEventListener('mouseleave', () => {
             this.isMouseOverPanel = false;
             if (!this.isDragging) {
-                this.hide();
+                // 鼠标离开面板时重新设置自动隐藏
+                this.setupAutoHide();
             }
         });
 
-        this.element.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        // 初始化拖拽事件处理器
+        this.mouseMoveHandler = this.handleMouseMove.bind(this);
+        this.mouseUpHandler = this.handleMouseUp.bind(this);
+        
+        // 初始化拖拽功能
+        this.setupDragging();
+        
         this.canvas.addEventListener('click', this.handleClick.bind(this));
     }
 
+    private setupDragging(): void {
+        if (this.currentConfig.enableDragging) {
+            this.element.addEventListener('mousedown', this.handleMouseDown.bind(this));
+            // 事件监听器绑定到 document 上，而不是 shadowRoot
+            if (this.mouseMoveHandler && this.mouseUpHandler) {
+                document.addEventListener('mousemove', this.mouseMoveHandler);
+                document.addEventListener('mouseup', this.mouseUpHandler);
+            }
+        } else {
+            this.element.removeEventListener('mousedown', this.handleMouseDown.bind(this));
+            if (this.mouseMoveHandler && this.mouseUpHandler) {
+                document.removeEventListener('mousemove', this.mouseMoveHandler);
+                document.removeEventListener('mouseup', this.mouseUpHandler);
+            }
+        }
+    }
+
     public updateConfig(newConfig: IConfig) {
+        const oldConfig = this.currentConfig;
         this.currentConfig = newConfig;
         this.originalSize = newConfig.qrCodeSize;
         this.enlargedSize = this.originalSize * 2;
 
+        // 更新拖拽功能
+        if (oldConfig.enableDragging !== newConfig.enableDragging) {
+            this.isDragging = false;
+            this.element.style.cursor = '';
+            this.setupDragging();
+        }
+
         if (this.element.classList.contains('visible') && this.currentUrl) {
             this.render();
         }
+    }
+
+    public setLinkHoverState(isHovered: boolean): void {
+        this.isLinkHovered = isHovered;
+    }
+
+    public startAutoHideTimer(): void {
+        // 直接开始计时，不管鼠标在哪
+        this.setupAutoHide();
     }
 
     public show(url: string, x: number, y: number, originalUrl?: string) {
@@ -71,19 +118,50 @@ export class QRCodePannel {
         this.render();
         this.updatePosition(x, y);
         this.element.classList.add('visible');
+        
+        // 设置自动隐藏
+        if (this.currentConfig.qrCodeHideTrigger === 'global') {
+            this.setupAutoHide();
+        }
+        // 注意：onLinkLeave 模式的计时器现在由 DOMObserver 控制
     }
 
     public hide() {
         this.element.classList.remove('visible');
         this.customPosition = null;
         this.isEnlarged = false;
+        
+        // 清除自动隐藏定时器
+        if (this.autoHideTimeout) {
+            clearTimeout(this.autoHideTimeout);
+            this.autoHideTimeout = null;
+        }
     }
 
     public isMouseOver(): boolean {
         return this.isMouseOverPanel;
     }
 
+    private setupAutoHide(): void {
+        // 清除之前的定时器
+        if (this.autoHideTimeout) {
+            clearTimeout(this.autoHideTimeout);
+            this.autoHideTimeout = null;
+        }
+
+        // 如果启用了自动隐藏且设置了延迟时间
+        if (this.currentConfig.qrCodeAutoHide && this.currentConfig.qrCodeHideDelay > 0) {
+            this.autoHideTimeout = window.setTimeout(() => {
+                // 如果鼠标不在面板上且不在拖拽，则隐藏
+                if (!this.isMouseOverPanel && !this.isDragging) {
+                    this.hide();
+                }
+            }, this.currentConfig.qrCodeHideDelay);
+        }
+    }
+
     private handleMouseDown(e: MouseEvent) {
+        if (!this.currentConfig.enableDragging) return;
         if ((e.target as HTMLElement).tagName === 'BUTTON') {
             return;
         }
@@ -99,7 +177,7 @@ export class QRCodePannel {
     }
 
     private handleMouseMove(e: MouseEvent) {
-        if (!this.isDragging) return;
+        if (!this.isDragging || !this.currentConfig.enableDragging) return;
 
         const deltaX = e.clientX - this.dragStartX;
         const deltaY = e.clientY - this.dragStartY;
@@ -117,6 +195,8 @@ export class QRCodePannel {
         if (this.isDragging) {
             this.isDragging = false;
             this.element.style.cursor = '';
+            // 拖拽结束后重新设置自动隐藏
+            this.setupAutoHide();
         }
     }
 
@@ -137,17 +217,45 @@ export class QRCodePannel {
         this.render();
     }
 
+    private getQRCodeColors(): { background: string; foreground: string } {
+        const style = this.currentConfig.qrCodeStyle;
+        
+        if (style.mode === 'custom') {
+            return {
+                background: style.background,
+                foreground: style.foreground
+            };
+        }
+        
+        // 检测系统主题
+        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (style.mode === 'auto') {
+            return isDarkMode ? 
+                { background: '#1a1a1a', foreground: '#ffffff' } :
+                { background: '#ffffff', foreground: '#000000' };
+        } else if (style.mode === 'dark') {
+            return { background: '#1a1a1a', foreground: '#ffffff' };
+        } else {
+            return { background: '#ffffff', foreground: '#000000' };
+        }
+    }
+
     private render() {
         this.element.innerHTML = '';
 
         const size = this.isEnlarged ? this.enlargedSize : this.originalSize;
+        const colors = this.getQRCodeColors();
+        
         new QRious({
             element: this.canvas,
             value: this.currentUrl || '',
             size: size,
             level: 'H',
-            background: '#ffffff',
-            foreground: '#000000',
+            background: colors.background,
+            backgroundAlpha: this.currentConfig.qrCodeStyle.backgroundAlpha,
+            foreground: colors.foreground,
+            foregroundAlpha: this.currentConfig.qrCodeStyle.foregroundAlpha,
         });
 
         this.element.appendChild(this.canvas);
@@ -241,7 +349,12 @@ export class QRCodePannel {
     }
 
     public destroy() {
-        document.removeEventListener('mousemove', this.handleMouseMove.bind(this));
-        document.removeEventListener('mouseup', this.handleMouseUp.bind(this));
+        if (this.mouseMoveHandler && this.mouseUpHandler) {
+            document.removeEventListener('mousemove', this.mouseMoveHandler);
+            document.removeEventListener('mouseup', this.mouseUpHandler);
+        }
+        if (this.autoHideTimeout) {
+            clearTimeout(this.autoHideTimeout);
+        }
     }
 }

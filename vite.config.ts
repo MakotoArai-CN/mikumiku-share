@@ -65,9 +65,10 @@ export default defineConfig({
       userscript: {
         "name": "MikuMiku-share - 链接转为二维码",
         "namespace": "https://github.com/MakotoArai-CN/mikumiku-share",
-        "version": "1.2.2",
+        "version": "1.3.0",
         "author": "MakotoArai",
         "description": "把鼠标可以点击的链接转为二维码。",
+        "license": "AGPL-3.0",
         "match": ["*://*/*"],
         "icon": "https://img.icons8.com/plasticine/100/qr-code.png",
         "grant": [
@@ -75,7 +76,8 @@ export default defineConfig({
           "GM_getValue",
           "GM_addStyle",
           "GM_registerMenuCommand",
-          "GM_xmlhttpRequest" // 如果需要进行网络请求
+          "GM_openInTab",
+          "GM_xmlhttpRequest"
         ],
         "connect": "*" // 允许连接到任何域，用于局域网通信
       },

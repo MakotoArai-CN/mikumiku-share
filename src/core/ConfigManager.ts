@@ -14,6 +14,32 @@ export const DEFAULT_CONFIG: IConfig = {
     blacklist: ['example.com'],
     whitelist: [],
     deviceId: 'mms-' + Math.random().toString(36).substring(2, 10),
+    qrCodeAutoHide: true,
+    qrCodeHideDelay: 0, // 0表示永不自动隐藏
+    qrCodeHideTrigger: 'onLinkLeave', // 默认鼠标离开链接时触发
+    enableDragging: true,
+    qrCodeStyle: {
+        mode: 'auto',
+        background: '#ffffff',
+        foreground: '#000000',
+        backgroundAlpha: 1,
+        foregroundAlpha: 1
+    },
+    enableQRRecognition: false,
+    qrRecognitionAction: 'copyWithToast',
+    qrRecognitionDelay: 3000,
+    enableCopyPurify: true,
+    copyPurifyDomains: [
+        'www.zhihu.com', 
+        'blog.csdn.net', 
+        'www.bilibili.com', 
+        'www.cnblogs.com',
+        'www.360doc.com',
+        'blog.51cto.com',
+        'www.kuwo.cn',
+        'read.qidian.com'
+    ],
+    enableSelectionUnlock: true
 };
 
 export class ConfigManager {
@@ -26,7 +52,8 @@ export class ConfigManager {
 
     public async init(): Promise<void> {
         const loadedConfig = await this.load();
-        this.config = { ...this.config, ...loadedConfig };
+        // 合并配置，确保新增的配置项有默认值
+        this.config = { ...DEFAULT_CONFIG, ...loadedConfig };
     }
 
     public get(): IConfig {

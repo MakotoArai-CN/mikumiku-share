@@ -22,6 +22,7 @@
         "vite-plugin-monkey": "^3.5.0"
     },
     "dependencies": {
+        "jsqr": "^1.4.0",
         "qrious": "^4.0.2"
     }
 }
